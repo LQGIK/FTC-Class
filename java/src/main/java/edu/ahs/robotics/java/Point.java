@@ -12,8 +12,12 @@ public class Point {
         this.y = y;
     }
 
-    public String toString(){
-        return "Point with coordinates (" + x + ", " + y + ")";
+    @Override
+    public String toString() {
+        return "Point{" +
+                "x=" + x +
+                ", y=" + y +
+                '}';
     }
 
     @Override
@@ -21,8 +25,8 @@ public class Point {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Point point = (Point) o;
-        return Double.compare(point.x, x) == 0 &&
-                Double.compare(point.y, y) == 0;
+        return Double.compare(point.x, this.x) == 0 &&
+                Double.compare(point.y, this.y) == 0;
     }
 
     @Override

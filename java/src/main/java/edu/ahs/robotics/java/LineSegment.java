@@ -1,5 +1,7 @@
 package edu.ahs.robotics.java;
 
+import java.util.Arrays;
+
 public class LineSegment {
 
     private Point a;
@@ -18,17 +20,55 @@ public class LineSegment {
         return "Points: " + a + ", " + b + "\nSlope: " + slope + "\nB: " + yInt;
     }
 
+    public double[] domainRestriction(){
+        /**
+         * Returns lower and upper bounds of domain
+         */
+        double[] boundaries = {this.a.getX(), this.b.getX()};
+        Arrays.sort(boundaries);
+        return boundaries;
+    }
+
+    public double[] rangeRestriction(){
+        double[] boundaries = {this.a.getY(), this.b.getY()};
+        Arrays.sort(boundaries);
+        return boundaries;
+    }
+
     public boolean onLine(Point point){
         /**
          * @param (Point point)
-         * @return Returns true if a given point is on the line segment (As of now it doesn't account for boundaries)
+         * @return Returns true if a given point is on the line segment
          */
-        if ((point.getX() * slope) + yInt == point.getY()){
+
+        // Initialize coordinates and restrictions
+        double x = point.getX();
+        double y = point.getY();
+        double[] yRest = this.rangeRestriction();
+        double[] xRest = this.domainRestriction();
+
+        // Test if point is on a vertical line
+        if (xRest[0] == xRest[1] && xRest[0] == x){
             return true;
         }
-        else {
-            return false;
+
+        // Test if point is on a horizontal line
+        else if (yRest[0] == yRest[1] && yRest[0] == y){
+            return true;
         }
+
+        // Test regular slope line
+        else if ((point.getX() * slope) + yInt == point.getY()){
+
+            // Check domain & range restriction
+            if (x >= xRest[0] && x <= xRest[1] && y >= yRest[0] && y <= yRest[1]){
+                return true;
+            }
+
+        }
+
+        // If all else fails, return false
+        return false;
     }
 
     public Point[] subDivide(int subSegments){
@@ -71,11 +111,10 @@ public class LineSegment {
     }
 
 
-
-    public Point interpolate(Point start, double euclidDistance){
+    public Point interpolate(Point start, double distance){
         /**
          * @param (Starting Point, Distance from point)
-         * @return Returns point along this line that is a given distance away
+         * @return Returns point along this line that is a given distance away.
          */
 
         // Assuming a or b isn't on an axis. Otherwise we have some issues with this algorithm
@@ -86,18 +125,17 @@ public class LineSegment {
         }
 
         // Calculate ratio of hypotenuses because this is same ratio for X and Y
-        double ratio = euclidDistance / a.distance(b);
+        double ratio = distance / a.distance(b);
 
         // Calculate total x and y distance between a and b
         double xDist = b.getX() - a.getX();
         double yDist = b.getY() - a.getY();
 
-        // Calculate new point
-        double new_x = a.getX() + (ratio * xDist);
-        double new_y = a.getY() + (ratio * yDist);
-        Point newPoint = new Point(new_x, new_y);
+        // Calculate new point (If distance is negative, move right to left, opposite if otherwise)
+        double new_x = distance > 0 ? a.getX() + (ratio * xDist) : b.getX() + (ratio * xDist);
+        double new_y = distance > 0 ? a.getY() + (ratio * yDist) : b.getY() + (ratio * yDist);
 
-        return newPoint;
+        return new Point(new_x, new_y);
 
     }
 
