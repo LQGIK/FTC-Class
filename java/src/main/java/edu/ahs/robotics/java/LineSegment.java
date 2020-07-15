@@ -134,6 +134,8 @@ public class LineSegment {
         // Calculate new point (If distance is negative, move right to left, opposite if otherwise)
         double new_x = distance > 0 ? a.getX() + (ratio * xDist) : b.getX() + (ratio * xDist);
         double new_y = distance > 0 ? a.getY() + (ratio * yDist) : b.getY() + (ratio * yDist);
+        new_x = Math.round((new_x * 10000.0) / 10000.0);
+        new_y = Math.round((new_y * 10000.0) / 10000.0);
 
         return new Point(new_x, new_y);
 

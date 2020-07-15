@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.*;
 
 public class Path {
 
-    private ArrayList<WayPoint> wayPoints;
+    private ArrayList<Path.WayPoint> wayPoints;
+    private ArrayList<Path.WayPoint> wayPointsUpdated = null;
     private int count;
 
 
@@ -17,92 +19,108 @@ public class Path {
      */
     public Path(Point[] rawPoints) {
 
-        this.wayPoints = new ArrayList<>();
+        wayPoints = new ArrayList<>();
+        wayPointsUpdated = new ArrayList<>();
+        count = 0;
 
         // Remove consecutive duplicates
         for (int i=0; i < rawPoints.length; i++){
 
             // Initialize first WayPoint
-            if (i == 0){
-                this.wayPoints.add(new WayPoint(rawPoints[0], 0, 0, 0));
-            }
+            if (i == 0) wayPoints.add(new Path.WayPoint(rawPoints[0], 0, 0, 0, 0, 0));
 
             // Check prev != current (already checks if i==0 in previous conditional)
             else if (!rawPoints[i - 1].equals(rawPoints[i])){
 
                 // Calculate distance values from current point to previous point
                 Point prev = rawPoints[i-1];
-                double distanceFromPrev = rawPoints[i].distance(prev);
-                double deltaXFromPrev = rawPoints[i].getX() - prev.getX();
-                double deltaYFromPrev = rawPoints[i].getY() - prev.getY();
+                Point current = rawPoints[i];
+                double distanceFromPrev = current.distance(prev);
+                double deltaXFromPrev = current.getX() - prev.getX();
+                double deltaYFromPrev = current.getY() - prev.getY();
 
-                this.wayPoints.add(new WayPoint(rawPoints[i], deltaXFromPrev, deltaYFromPrev, distanceFromPrev));
+                // Calculate distanceFromStart (The loop adds the distance between all consecutive waypoints)
+                double distanceFromStart = 0.0;
+                double distanceToEnd = 0.0;
+                for (int index=1; index < wayPoints.size(); index++){
+                    distanceFromStart += wayPoints.get(index).point.distance(wayPoints.get(index - 1).point);
+                }
+                distanceFromStart += current.distance(prev);
+                wayPoints.add(new Path.WayPoint(current, deltaXFromPrev, deltaYFromPrev, distanceFromPrev, distanceFromStart, distanceToEnd));
             }
 
         }
+
+        final double totDistance = totalDistance();
+        wayPoints.forEach(wayPoint -> wayPoint.setDistanceToEnd(totDistance - wayPoint.distanceFromStart));
+
         // Path must consist of more than two points
-        if (this.wayPoints.size() <= 2){
+        if (wayPoints.size() < 2){
             throw new IllegalArgumentException("A Path must be defined by at least two non-duplicate points.");
         }
 
     }
 
 
-    /**
-     * @return all WayPoints
-     */
-    public ArrayList<WayPoint> getWayPoints(){
-        return this.wayPoints;
+
+    public ArrayList<Path.WayPoint> getWayPoints(){
+        /**
+         * @return all WayPoints
+         */
+        return wayPoints;
     }
 
-    /**
-     * @return total distance of the path
-     */
+    public boolean onPath(Point point){
+        /**
+         * @param a given point to test
+         * @return boolean on whether point exists on the path
+         */
+        for (int i=1; i < wayPoints.size(); i++){
+            LineSegment line = new LineSegment(wayPoints.get(i-1).point, wayPoints.get(i).point);
+            if (line.onLine(point)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public double totalDistance(){
+        /**
+         * @return total distance of the path
+         */
         double totalD = 0;
-        for (int i=0; i < this.wayPoints.size(); i++){
+        for (int i=0; i < wayPoints.size(); i++){
             if (!(i == 0)){
-                totalD += this.wayPoints.get(i).distanceFromPrevious;
+                totalD += wayPoints.get(i).distanceFromPrevious;
             }
         }
         return totalD;
     }
 
-    public Path.WayPoint pathInterpolate(WayPoint start, double distance){
-        /**
-         * @param Starting Point, Distance from the Starting Point of that path
-         * @return the target point given a start and distance along a path
-         */
+
+    public Point pathInterpolate(Point start, double distance, int i){
+
+        // Store count as a class variable so we can access it from the separate method
+        count = i;
+
 
         // If there is no next segment and we've reached the end of the path, simply return the last WayPoint
-        WayPoint lastWP = wayPoints.get(wayPoints.size() - 1);
+        Point lastWP = wayPoints.get(wayPoints.size() - 1).point;
         if (start.equals(lastWP)){
+            count = wayPoints.size() - 1;
             return lastWP;
         }
-        // If we've exhausted the distance to travel or if the targetPoint is on the given line
+        // Don't wrap around, we've exhausted the distance. Add the waypoint so we have a reference of its position relative to other waypoints
         else if (distance <= 0){
+            wayPointsUpdated.add(i, new Path.WayPoint(start, 0.0, 0.0, 0.0, 0.0, 0.0));
             return start;
         }
 
-        // Retrieve next WP, Interpolate the leftover distance,
-        WayPoint next = wayPoints.get(count + 1);
-        WayPoint targetPoint = calcWP(start, new LineSegment(start.point, next.point).interpolate(start.point, distance));
-        count += 1;
-        return pathInterpolate(next, next.point.distance(targetPoint.point));
-    }
 
-
-
-    public static Path.WayPoint calcWP(WayPoint prevWP, Point current){
-        /**
-         * @param current point
-         * @return a WayPoint given the previous WayPoint, and the current Point
-          */
-        // Calculate WayPoint Data
-        double deltaX = current.getX() - prevWP.point.getX();
-        double deltaY = current.getY() - prevWP.point.getY();
-        double distanceFromPrev = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
-        return new WayPoint(current, deltaX, deltaY, distanceFromPrev);
+        // Retrieve next WP, Interpolate the leftover distance depending upon if next or tp is closer.
+        Point next = wayPoints.get(i).point;
+        Point tp = new LineSegment(start, next).interpolate(start, distance);
+        return (start.distance(tp) < start.distance(next)) ? pathInterpolate(tp, distance - start.distance(tp), i) : pathInterpolate(next, distance - start.distance(next), i + 1);
     }
 
 
@@ -112,36 +130,80 @@ public class Path {
      */
     public Path.WayPoint targetPoint(Point current, double distance) {
 
-        for (int i=0; i < wayPoints.size(); i++){
 
-            // If we've come across a positive component length
-            double componentLength = wayPoints.get(i).componentAlongPath(current);
-            if (componentLength > 0){
+        //If distance is negative, flip the ArrayList & change the distance to positive
+        if (distance < 0){
+            distance = -distance;
 
-                // Remember segment we are on so we don't have to traverse 'n' times. (i-1 bc in our pathInterpolate our current is where we start, not where end up)
-                count = i - 1;
-
-
-                // Be cautious of Start exceptions. It will just wrap around. Can only occur on a closed loop or intersection
-                if (i == 0){
-                    Point pathPrev = wayPoints.get(wayPoints.size() - 1).point;
-                }
-
-                // Grab points for interpolation
-                Point pathCurrent = wayPoints.get(i).point;
-                Point pathPrev = wayPoints.get(i - 1).point;
-
-                // Calculate projected point
-                LineSegment line2InterBack = new LineSegment(pathPrev, pathCurrent);
-                WayPoint projected = calcWP(wayPoints.get(i-1), line2InterBack.interpolate(pathCurrent, -1 * componentLength));
-
-
-                // Recursively run this method for path interpolation till we reach the final point
-                return pathInterpolate(projected, distance);
+            ArrayList<Path.WayPoint> temp = new ArrayList<>();
+            double tempNum = 0;
+            for (int k=wayPoints.size() - 1; k >= 0; k--){
+                Path.WayPoint tempWP = wayPoints.get(k);
+                tempNum = tempWP.distanceFromStart;
+                tempWP.distanceFromStart = tempWP.distanceToEnd;
+                tempWP.distanceToEnd = tempNum;
+                tempWP.deltaXFromPrevious = -tempWP.deltaXFromPrevious;
+                tempWP.deltaYFromPrevious = -tempWP.deltaYFromPrevious;
+                temp.add(tempWP);
             }
+
+            // Set wayPoints = temp & continue
+            wayPoints = temp;
         }
-        throw new Error("All paths are behind. No positive ComponentAlongPath.");
+
+
+        // Retrieve first positive componentAlongPath
+        int i;
+        double componentLength = -1;
+        for (i=0; i < wayPoints.size(); i++){
+            componentLength = wayPoints.get(i).componentAlongPath(current);
+            if (componentLength > 0) break;
+        }
+        if (componentLength < 0) throw new Error("All paths are behind. No positive ComponentAlongPath.");
+        /*
+        // This is set to the index of the waypoint directly before the projected
+        if (i == 0){
+            // Be cautious of Start exceptions. It will just wrap around. Can only occur on a closed loop or intersection
+            Point pathPrev = wayPoints.get(wayPoints.size() - 1).point;
+        }
+        */
+
+
+        // Grab points for interpolation. The 'ahead' and 'behind' are relative to the projected robot's point on the path
+        Point aheadWP = wayPoints.get(i).point;
+        Point behindWP = wayPoints.get(i - 1).point;
+        LineSegment line2InterBack = new LineSegment(behindWP, aheadWP);
+        Point projected = line2InterBack.interpolate(aheadWP, -1 * componentLength);
+
+        // tp = Target Point : Discover tp via a recursive pathInterpolate method
+        wayPointsUpdated = (ArrayList<Path.WayPoint>) wayPoints.clone();
+        Point tp = pathInterpolate(projected, distance, i);
+        // Note: The target point is added to wayPointsUpdated
+        //       Count is the index of the targetPoint
+
+
+        /*  Calculate previous waypoint to tp
+            Use prev2TP to calculate deltaX, deltaY, distanceFromPrev
+            Iterate all waypoints (from 0) up until prev2TargetPoint and calculate
+                |->> Note: prev2TargetPoint may not be a point on the original wayPoints list. It likely will be the projected
+         */
+        //if (count - 1 < 0){
+        //   throw new Error("Index out of bounds.");
+        //}
+
+        // Calc WayPoint data
+        Path.WayPoint prev2TP = wayPointsUpdated.get(count - 1);
+        double deltaX = tp.getX() - prev2TP.point.getX();
+        double deltaY = tp.getY() - prev2TP.point.getY();
+        double distanceFromPrev = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
+        double distanceFromStart = distanceFromPrev + prev2TP.distanceFromStart;
+        double distanceToEnd = totalDistance() - distanceFromStart;
+
+
+        // Return statement to break the loop
+        return new Path.WayPoint(tp, deltaX, deltaY, distanceFromPrev, distanceFromStart, distanceToEnd);
     }
+
 
 
     public static class WayPoint {
@@ -149,13 +211,18 @@ public class Path {
         private double deltaXFromPrevious;
         private double deltaYFromPrevious;
         private double distanceFromPrevious;
+        private double distanceFromStart;
+        private double distanceToEnd;
 
-        private WayPoint(Point point, double deltaXFromPrevious, double deltaYFromPrevious, double distanceFromPrevious) {
+        private WayPoint(Point point, double deltaXFromPrevious, double deltaYFromPrevious, double distanceFromPrevious, double distanceFromStart, double distanceToEnd) {
             this.point = point;
             this.deltaXFromPrevious = deltaXFromPrevious;
             this.deltaYFromPrevious = deltaYFromPrevious;
             this.distanceFromPrevious = distanceFromPrevious;
+            this.distanceFromStart = distanceFromStart;
+            this.distanceToEnd = distanceToEnd;
         }
+
 
         /**
          * Calculates the projection of the vector Vcurrent leading from the supplied current
@@ -175,15 +242,19 @@ public class Path {
             return dp / distanceFromPrevious;
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            WayPoint wayPoint = (WayPoint) o;
-            return Double.compare(wayPoint.deltaXFromPrevious, deltaXFromPrevious) == 0 &&
-                    Double.compare(wayPoint.deltaYFromPrevious, deltaYFromPrevious) == 0 &&
-                    Double.compare(wayPoint.distanceFromPrevious, distanceFromPrevious) == 0 &&
-                    point.equals(wayPoint.point);
+        public void setDistanceToEnd(double value){
+            /**
+             * @param value to set distanceToEnd to.
+             */
+            distanceToEnd = value;
+        }
+
+        public double getDistanceToEnd(){
+            return distanceToEnd;
+        }
+
+        public void setDistanceFromStart(double value){
+            distanceFromStart = value;
         }
 
         @Override
@@ -193,12 +264,27 @@ public class Path {
                     ", deltaXFromPrevious=" + deltaXFromPrevious +
                     ", deltaYFromPrevious=" + deltaYFromPrevious +
                     ", distanceFromPrevious=" + distanceFromPrevious +
+                    ", distanceFromStart=" + distanceFromStart +
+                    ", distanceToEnd=" + distanceToEnd +
                     '}';
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            WayPoint wayPoint = (WayPoint) o;
+            return Double.compare(wayPoint.deltaXFromPrevious, deltaXFromPrevious) == 0 &&
+                    Double.compare(wayPoint.deltaYFromPrevious, deltaYFromPrevious) == 0 &&
+                    Double.compare(wayPoint.distanceFromPrevious, distanceFromPrevious) == 0 &&
+                    Double.compare(wayPoint.distanceFromStart, distanceFromStart) == 0 &&
+                    Double.compare(wayPoint.distanceToEnd, distanceToEnd) == 0 &&
+                    Objects.equals(point, wayPoint.point);
+        }
+
+        @Override
         public int hashCode() {
-            return Objects.hash(point, deltaXFromPrevious, deltaYFromPrevious, distanceFromPrevious);
+            return Objects.hash(point, deltaXFromPrevious, deltaYFromPrevious, distanceFromPrevious, distanceFromStart, distanceToEnd);
         }
     }
 
