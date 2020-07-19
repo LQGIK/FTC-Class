@@ -11,6 +11,7 @@ public class Path {
     private ArrayList<Path.WayPoint> wayPoints;
     private ArrayList<Path.WayPoint> wayPointsUpdated = null;
     private int count;
+    private int currentWayPointIndex;
 
 
     /**
@@ -22,6 +23,7 @@ public class Path {
         wayPoints = new ArrayList<>();
         wayPointsUpdated = new ArrayList<>();
         count = 0;
+        currentWayPointIndex = 0;
 
         // Remove consecutive duplicates
         for (int i=0; i < rawPoints.length; i++){
@@ -152,7 +154,9 @@ public class Path {
         }
 
 
-        // Retrieve first positive componentAlongPath
+        // Retrieve all positive components along path, compare all perpendicular distances from current to projected
+        ArrayList<Double> componentLengths = new ArrayList<>();
+
         int i;
         double componentLength = -1;
         for (i=0; i < wayPoints.size(); i++){
@@ -200,7 +204,8 @@ public class Path {
         double distanceToEnd = totalDistance() - distanceFromStart;
 
 
-        // Return statement to break the loop
+        // Return statement to break the loop. Add the waypoint so we can check if we've already passed this point.
+        wayPoints.add(count, new Path.WayPoint(tp, deltaX, deltaY, distanceFromPrev, distanceFromStart, distanceToEnd));
         return new Path.WayPoint(tp, deltaX, deltaY, distanceFromPrev, distanceFromStart, distanceToEnd);
     }
 

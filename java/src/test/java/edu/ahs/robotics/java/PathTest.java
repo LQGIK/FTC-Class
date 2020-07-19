@@ -37,7 +37,6 @@ public class PathTest {
         assertEquals(new Point(9,9), path2.targetPoint(new Point(10,9), 0).point);
         assertEquals(new Point(1,5), path2.targetPoint(new Point(7,8), 20).point);
         //assertEquals(new Point(9,5), path2.targetPoint(new Point(7,10), 5).point);
-        //assertEquals(new Point(9,9), path2.targetPoint(new Point(9,6), -3).point);
 
 
 
