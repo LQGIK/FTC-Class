@@ -20,8 +20,8 @@ public class Path {
      */
     public Path(Point[] rawPoints) {
 
-        wayPoints = new ArrayList<>();
-        wayPointsUpdated = new ArrayList<>();
+        wayPoints = new ArrayList<Path.WayPoint>();
+        wayPointsUpdated = new ArrayList<Path.WayPoint>();
         count = 0;
         currentWayPointIndex = 0;
 
