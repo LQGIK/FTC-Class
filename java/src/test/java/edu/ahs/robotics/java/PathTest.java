@@ -11,11 +11,22 @@ public class PathTest {
     public void testTargetPoint() {
 
         /**
+         * HERE IS THE ISSUE, ON LINE 17
+         */
+        Point[] points2 = {new Point(9, 9), new Point(9, 5), new Point(6, 4), new Point(1, 5)};
+        Path path2 = new Path(points2);
+        assertEquals(new Point(6, 4), path2.targetPoint(new Point(7, 8), 6.16227766).point);
+        assertEquals(new Point(9, 6), path2.targetPoint(new Point(7, 8), 2).point);
+        assertEquals(new Point(9, 9), path2.targetPoint(new Point(10, 9), 0).point);
+        assertEquals(new Point(1, 5), path2.targetPoint(new Point(7, 8), 20).point);
+        //assertEquals(new Point(9,5), path2.targetPoint(new Point(7,10), 5).point);
+
+        /**
          * Succeeds on paths reflected across all axes
          */
 
 
-        // Make some points
+/*        // Make some points
         Point[] points = {new Point(-.75, 0), new Point(3, 5), new Point(7, 5), new Point(7, 0), new Point(0,0)};
         Path path = new Path(points);
         assertEquals(new Point(0,0), path.targetPoint(new Point(4, -2), 50).point);
@@ -27,16 +38,7 @@ public class PathTest {
         Path path1 = new Path(points1);
         assertEquals(new Point(-2, -2), path1.targetPoint(new Point(0,0), 10).point);
         assertEquals(new Point(0, 0), path1.targetPoint(new Point(0,0), 0).point);
-        //assertEquals(new Point(0, 0), path1.targetPoint(new Point(1,1), 0).point);
-
-
-        Point[] points2 = {new Point(9,9), new Point(9,5), new Point(6,4), new Point(1,5)};
-        Path path2 = new Path(points2);
-        assertEquals(new Point(6,4), path2.targetPoint(new Point(7,8), 6.16227766).point);
-        assertEquals(new Point(9,6), path2.targetPoint(new Point(7,8), 2).point);
-        assertEquals(new Point(9,9), path2.targetPoint(new Point(10,9), 0).point);
-        assertEquals(new Point(1,5), path2.targetPoint(new Point(7,8), 20).point);
-        //assertEquals(new Point(9,5), path2.targetPoint(new Point(7,10), 5).point);
+        //assertEquals(new Point(0, 0), path1.targetPoint(new Point(1,1), 0).point);*/
 
 
 
