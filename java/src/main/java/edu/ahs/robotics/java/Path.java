@@ -131,6 +131,11 @@ public class Path {
      * Note that the point will usually be interpolated between the points that originally defined the Path
      */
     public Path.WayPoint targetPoint(Point current, double distance) {
+        /**
+         * @param currentWayPoint defaults to 0
+         * @param current is the current position of the robot (not necessarily on the path)
+         * @param distance is the distance to travel along the path from the projected point of the 'current' onto the path.
+         */
 
 
         //If distance is negative, flip the ArrayList & change the distance to positive
@@ -203,6 +208,10 @@ public class Path {
         double distanceFromStart = distanceFromPrev + prev2TP.distanceFromStart;
         double distanceToEnd = totalDistance() - distanceFromStart;
 
+
+        // Keep track of current node
+        currentWayPointIndex = count;
+        System.out.println("WayPointIndex: " + currentWayPointIndex);
 
         // Return statement to break the loop. Add the waypoint so we can check if we've already passed this point.
         wayPoints.add(count, new Path.WayPoint(tp, deltaX, deltaY, distanceFromPrev, distanceFromStart, distanceToEnd));
